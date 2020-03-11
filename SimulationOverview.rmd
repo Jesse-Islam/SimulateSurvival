@@ -17,17 +17,18 @@ The following chunks are demonstrating simulation
 ### basic followuptime simulation
 ```{r SimulateTime}
 library(survival)
+library(ggplot2)
 library(casebase)
 #basic follow up time
-followUpTime <- rweibull(30000, shape=4, scale=10)
-hist(followUpTime)
+#followUpTime <- rweibull(30000, shape=4, scale=10)
+#hist(followUpTime)
 
 ```
 
 
 
 ### simulating follow up time with censorship and covariates
-```{r simulatetimecensWithCovariates}
+```{r simulatetimecensWithCovariates, eval=FALSE}
 simulWeibCens <- function(N, lambda, rho, beta, rateC)
 {
   # covariate --> N Bernoulli trials
@@ -73,7 +74,7 @@ for(k in 1:obs)
 
 ```
 
-```{r simulateNonProportionalHazards,eval=FALSE}
+```{r simulateNonProportionalHazardsWeibull,eval=FALSE}
 simulExpCensNonProportional <- function(N, lambda, beta,timeDependentBetas, rateC)
 {
   # covariate --> N Bernoulli trials
@@ -125,7 +126,7 @@ for(k in 1:obs)
 
 ```
 
-```{r simulateNonProportionalHazards,eval=FALSE}
+```{r simulateNonProportionalHazards,eval=TRUE}
 simulGomCensNonProportional <- function(N, lambda,gamma, beta,timeDependentBetas, rateC)
 {
   # covariate --> N Bernoulli trials
@@ -164,7 +165,7 @@ timeBetas<-c(1,2,3,4)
 betaHat <-matrix(NA, obs,length(betas))
 for(k in 1:obs)
 {
-  dat <- simulGomCensNonProportional(N=1000, lambda=0.5,gamma=0.5, beta=betas,timeBetas, rateC=0.1)
+  dat <- simulGomCensNonProportional(N=1000, lambda=0.5,gamma=6, beta=betas,timeBetas, rateC=0.1)
   fit <- coxph(Surv(time, status) ~ x.1+x.2+x.3+x.4+xt.1*time+xt.2*time+xt.3*time+xt.4*time, data=dat)
   cbFit<- fitSmoothHazard(status~time+x.1+x.2+x.3+x.4+xt.1*time+xt.2*time+xt.3*time+xt.4*time,data=dat)
   abcb<-absoluteRisk(cbFit,newdata=dat,time=c(1:max(dat$time)))
@@ -182,3 +183,29 @@ for(k in 1:obs)
 
 
 ```
+
+
+```{r plotsForPresentation}
+pt_object <- casebase::popTime(dat, event = "status",time="time")
+plot(pt_object,add.case.series = FALSE,add.base.series = FALSE,ratio=0.5)
+plot(pt_object,add.case.series = FALSE,add.base.series = TRUE,ratio=0.5,legend=TRUE)
+plot(pt_object,add.base.series = TRUE,add.case.series = TRUE,ratio=0.5,legend=TRUE)
+
+```
+
+
+$$h(t|x)=\lambda e^{\gamma+\beta X +\beta_{t}X_{t}}$$
+
+$$H(t|x)=\int_{0}^{t}h(u)du$$
+$$U=exp[H(t|x))]=exp[- \frac{\lambda e^{\beta X}}{\gamma +\beta_{t}X_{t} }(e^{\gamma + \beta_{t}X_{t}t}-1) ]$$
+$$ t=\frac{1}{\gamma + \beta_{t}X_{t}}*log(\frac{\gamma + \beta_{t}X_{t}}{\lambda e^{\beta X}} log(U)+1)$$
+
+\begin{enumerate}
+  \item $\lambda$ = shape
+  \item $\gamma$ = scale 
+  \item $\beta_{t}X_{t}$ = time-dependent linear predictors
+  \item $\beta_{t}X_{t}$ = time-independent
+  \item $U \sim U(0,1)$
+  
+\end{enumerate}
+
