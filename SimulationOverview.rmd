@@ -160,26 +160,34 @@ simulGomCensNonProportional <- function(N, lambda,gamma, beta,timeDependentBetas
 
 set.seed(1234)
 obs<- 1
-betas<-c(-0.6,0.5,10,-4)
-timeBetas<-c(1,2,3,4)
+betas<-c(5,4,3,2,1,0.0001,0.0001,0.0001,0.0001,0.0001)
+timeBetas<-c(5,4,3,2,1,0.0001,0.0001,0.0001,0.0001,0.0001)
 betaHat <-matrix(NA, obs,length(betas))
 for(k in 1:obs)
 {
   dat <- simulGomCensNonProportional(N=1000, lambda=0.5,gamma=6, beta=betas,timeBetas, rateC=0.1)
-  fit <- coxph(Surv(time, status) ~ x.1+x.2+x.3+x.4+xt.1*time+xt.2*time+xt.3*time+xt.4*time, data=dat)
+ 
+}
+#make random no association (abt 100)
+#from full data, fit cox alone, then both cb and cox with regularization
+
+
+  fit <- coxph(Surv(time, status) ~ x.1+x.2+x.3+x.4+xt.1*time+xt.2*time+xt.3*time+xt.4*time-time, data=dat)
   cbFit<- fitSmoothHazard(status~time+x.1+x.2+x.3+x.4+xt.1*time+xt.2*time+xt.3*time+xt.4*time,data=dat)
   abcb<-absoluteRisk(cbFit,newdata=dat,time=c(1:max(dat$time)))
   cbFit<- fitSmoothHazard(status~log(time)+x.1+x.2+x.3+x.4+xt.1*time+xt.2*time+xt.3*time+xt.4*time,data=dat)
   abcbwei<-absoluteRisk(cbFit,newdata=dat,time=c(1:max(dat$time)))
-  #betaHat[k,] <- fit$coef
+  betaHat[k,] <- fit$coef
+  
+  
+  
   plot(survfit(fit),fun="event",col="red",lwd=2)
   lines(abcb[,1],rowMeans(abcb[,-c(1)]),type="l",col="blue",lwd=2)
   lines(abcbwei[,1],rowMeans(abcbwei[,-c(1)]),type="l",col="Black",lwd=2)
   legend("bottomright", legend=c("Cox", "Gompertz","Weibull"),
        col=c("red", "blue","black"), lty=1:2, cex=0.8)
   
-  
-}
+ 
 
 
 ```
@@ -209,3 +217,24 @@ $$ t=\frac{1}{\gamma + \beta_{t}X_{t}}*log(\frac{\gamma + \beta_{t}X_{t}}{\lambd
   
 \end{enumerate}
 
+```{r censoringSimulations}
+
+obs<- seq(0.01,0.9, by=0.1)
+betas<-c(-0.6,0.5,10,-4)
+timeBetas<-c(1,2,3,4)
+betaHat <-matrix(NA, obs,length(betas))
+curves<-matrix(NA, 1000,90)
+
+k=1
+  dat <- simulGomCensNonProportional(N=1000, lambda=0.5,gamma=6, beta=betas,timeBetas, rateC=obs[k])
+  km<-survival::survfit(survival::Surv(time,status)~1,data=dat)
+  colors<-RColorBrewer::brewer.pal(n = 9, name = 'YlOrRd')
+  plot(x=km$time,y=1-km$surv,type="l",col=colors[9],lwd=2)
+for(k in 2:length(obs))
+{
+  dat <- simulGomCensNonProportional(N=1000, lambda=0.5,gamma=6, beta=betas,timeBetas, rateC=obs[k])
+  km<-survival::survfit(survival::Surv(time,status)~1,data=dat)
+  lines(x=km$time,y=1-km$surv,type="l",col=colors[9-k+1],lwd=2)
+  }
+
+```
